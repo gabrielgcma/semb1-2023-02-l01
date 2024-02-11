@@ -20,9 +20,9 @@
  * Name: main
  ****************************************************************************/
 
-int main(void)
-{
-  while(1);
+int main(void) {
+  while (1)
+    ;
 
   /* Nao deveria chegar aqui */
 

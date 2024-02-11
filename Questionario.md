@@ -1,4 +1,9 @@
-# Questionário Sistemas Embarcados I
+# Questionário Sistemas Embarcados I  
+
+```
+Aluno: Gabriel Carneiro Marques Amado
+Matrícula: 12111ECP002
+```
 
 ## 1. Explique brevemente o que é compilação cruzada (***cross-compiling***) e para que ela serve.
 
