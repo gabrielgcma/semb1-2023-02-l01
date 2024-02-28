@@ -1,3 +1,7 @@
+# Sistemas Embarcados I - 2023/3 - Universidade Federal de Uberlândia
+# Aluno: Gabriel Carneiro Marques Amado
+# Matrícula: 12111ECP002
+
 CC = arm-none-eabi-gcc
 CFLAGS = -g -mcpu=cortex-m4 -mthumb -O0 -Wall 
 
