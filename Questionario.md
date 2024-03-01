@@ -175,8 +175,38 @@ Os fabricantes integradores podem determinar quantos sinais de interrupção o N
 
 ### (j) Em modo de execução normal, o Cortex-M pode fazer uma chamada de função usando a instrução **BL**, que muda o **PC** para o endereço de destino e salva o ponto de execução atual no registador **LR**. Ao final da função, é possível recuperar esse contexto usando uma instrução **BX LR**, por exemplo, que atualiza o **PC** para o ponto anterior. No entanto, quando acontece uma interrupção, o **LR** é preenchido com um valor completamente  diferente,  chamado  de  **EXC_RETURN**.  Explique  o  funcionamento  desse  mecanismo  e especifique como o **Cortex-M** consegue fazer o retorno da interrupção. 
 
+Ao final do tratamento da exceção, o valor de EXC_RETURN é escrito no PC e isso desencadeia a sequência de retorno de uma exceção. 
+
+Essa sequência pode ser gerada por instruções como: 
+
+- `BX <reg>`
+- `POP{PC}` ou `POP{...., PC}`
+- Load (`LDR`) ou Load Multiple (`LDM`)
+
+Ao entrar no tratamento de uma exceção, o processador empilha na stack da memória os valores dos registros da execução atual. Quando o mecanismo de retorno de exceção é desencadeado, o processador acessa os valores desses registradores previamente empilhados, e os restaura nos devidos registros -- esse processo é chamado de desempilhamento (*unstacking*). Além disso, alguns registros do NVIC e registros do processador (PSR, SP, CONTROL, etc) serão atualizados.
+
+Paralelo a isso, o programa pode começar a buscar as instruções do programa previamente interrompido, para que sua continuação possa ser o mais breve possível.
+
 ### (k) Qual  a  diferença  no  salvamento  de  contexto,  durante  a  chegada  de  uma  interrupção,  entre  os processadores Cortex-M3 e Cortex M4F (com ponto flutuante)? Descreva em termos de tempo e também de uso da pilha. Explique também o que é ***lazy stack*** e como ele é configurado. 
 
+Nos processadores Cortex-M3 e Cortex-M4 sem ponto flutuante, assim que uma exceção é aceita pelo processador, registros são inseridos na stack, formando o stack frame:
+
+![](./imgs/stacking.png)
+
+
+![](./imgs/stacking2.png)
+
+Aproveitando de suas múltiplas interfaces de barramento, os processadores Cortex-M3 e Cortex-M4 também realizam fetch do vetor de interrupções e depois disso o fetch de instruções do handler da interrupção.
+
+A stack sendo usada durante as operações de salvamento de contexto pode ser tanto a Main stack (usando o Main Stack Pointer, MSP), ou a Process Stack (usando o Process Stack Pointer, PSP). Se o processador estava em Thread mode e estava usando o MSP (bit 1 do registrador CONTROL era 0), o salvamento de contexto é feito na main stack. Se o processador estava em Thread mode e estava usando o PSP (bit 1 do registrador CONTROL era 1), o salvamento de contexto é feito na stack de processo.
+
+*Lazy stacking* é uma feature específica para o stacking de registros na FPU (*Floating Point Unit*). Logo, só se aplica para processadores Cortex-M4F. Se a FPU estiver ativa e foi usada, os registros dela pertencentes podem conter dados que devem ser salvos. Observando a figura a seguir, fica evidente que, durante o stacking de registros de ponto flutuante, 17 inserções adicionais na memória vão ser necessárias (S0 ~ S15 + FPSCR).
+
+![](./imgs/stack_frame.png)
+
+Isso vai aumentar a latência de interrupção de 12 para 29 ciclos. Para reduzir essa latência, o lazy stacking (ativado por padrão) faz com que os registros de ponto flutuante só sejam stackados caso solicitado por um handler de exceção -- no caso de uma operação com ponto fluente, por exemplo. Isso ocorre porque o lazy stacking apenas reserva o espaço necessário em memória para o stacking dos registros de ponto flutuante, mantendo a latência da interrupção em 12 ciclos. Além disso, um registro interno chamado LSPACT (*Lazy Stacking Preservation Active*) é setado e um outro registro de 32 bits chamado FPCAR (*Floating Point Context Address Register*) armazena o endereço do espaço de stack reservado para os registros de ponto flutuante.
+
+Dessa maneira, se o handler não requer nenhuma operação de ponto flutuante, os registros continuam intocados durante a operação do handler, e não são restaurados ao finalizar. Caso contrário, o processador detecta a necessidade e interrompe a si mesmo, fazendo as inserções dos registros de ponto flutuante na stack reservada, limpando também o LSPACT. Depois disso, o handler continua suas operações.
 
 ## Referências
 
